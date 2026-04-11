@@ -1,4 +1,4 @@
-# input-mask
+# InputMask
 
 A lightweight library for applying input masks using HTML attributes only.
 
