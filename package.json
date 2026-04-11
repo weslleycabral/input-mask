@@ -1,7 +1,7 @@
 {
     "name": "input-mask",
     "version": "1.0.0",
-    "description": "",
+    "description": "Attribute-driven input masking for browser forms powered by IMask.",
     "homepage": "https://github.com/weslleycabral/input-mask#readme",
     "bugs": {
         "url": "https://github.com/weslleycabral/input-mask/issues"
@@ -13,13 +13,40 @@
     "license": "ISC",
     "author": "Weslley Cabral",
     "type": "commonjs",
-    "main": "index.js",
+    "main": "./dist/input-mask.cjs",
+    "module": "./dist/input-mask.mjs",
+    "exports": {
+        ".": {
+            "import": "./dist/input-mask.mjs",
+            "require": "./dist/input-mask.cjs",
+            "default": "./dist/input-mask.mjs"
+        }
+    },
+    "unpkg": "./dist/input-mask.min.js",
+    "jsdelivr": "./dist/input-mask.min.js",
+    "files": [
+        "dist",
+        "LICENSE",
+        "README.md"
+    ],
+    "keywords": [
+        "input-mask",
+        "mask",
+        "form",
+        "imask",
+        "webflow",
+        "cdn"
+    ],
     "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1",
-        "build": "node build.js"
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "build": "node build.cjs",
+        "prepublishOnly": "npm test && npm run build"
     },
     "devDependencies": {
-        "esbuild": "^0.28.0"
+        "esbuild": "^0.28.0",
+        "jsdom": "^29.0.2",
+        "vitest": "^4.1.4"
     },
     "dependencies": {
         "imask": "^7.6.1"

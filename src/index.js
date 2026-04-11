@@ -38,6 +38,7 @@ import IMask from 'imask';
 const MASK_SELECTOR = '[data-mask]';
 const instances = new WeakMap();
 const rawBindings = new WeakMap();
+const mutedAttributeElements = new WeakSet();
 
 /* ---------------------------------- */
 /* Utils                              */
@@ -222,6 +223,18 @@ function toVisibleBooleanString(value) {
     return value ? 'true' : 'false';
 }
 
+function runWithMutedAttributes(el, callback) {
+    mutedAttributeElements.add(el);
+
+    try {
+        callback();
+    } finally {
+        window.setTimeout(() => {
+            mutedAttributeElements.delete(el);
+        }, 0);
+    }
+}
+
 /* ---------------------------------- */
 /* Raw submit handling                */
 /* ---------------------------------- */
@@ -254,7 +267,9 @@ function setupRawSubmission(input, mask) {
     hidden.value = mask.unmaskedValue ?? '';
 
     input.dataset.maskOriginalName = originalName;
-    input.removeAttribute('name');
+    runWithMutedAttributes(input, () => {
+        input.removeAttribute('name');
+    });
 
     form.appendChild(hidden);
     rawBindings.set(input, { hidden, form });
@@ -493,9 +508,12 @@ function destroyMaskElement(el) {
         rawBinding.hidden.remove();
         rawBindings.delete(el);
 
-        const originalName = el.dataset.maskOriginalName;
+        const currentName = el.getAttribute('name');
+        const originalName = currentName || el.dataset.maskOriginalName;
         if (originalName) {
-            el.setAttribute('name', originalName);
+            runWithMutedAttributes(el, () => {
+                el.setAttribute('name', originalName);
+            });
             delete el.dataset.maskOriginalName;
         }
     }
@@ -514,41 +532,95 @@ function scan(root = document) {
 }
 
 function createObserver() {
+    const pendingInit = new Set();
+    const pendingDestroy = new Set();
+    const pendingRefresh = new Set();
+    let scheduled = false;
+
+    const flush = () => {
+        scheduled = false;
+
+        pendingDestroy.forEach((el) => {
+            pendingInit.delete(el);
+            pendingRefresh.delete(el);
+            destroyMaskElement(el);
+        });
+
+        pendingRefresh.forEach((el) => {
+            pendingInit.delete(el);
+            refreshMaskElement(el);
+        });
+
+        pendingInit.forEach((el) => {
+            initMaskElement(el);
+        });
+
+        pendingDestroy.clear();
+        pendingRefresh.clear();
+        pendingInit.clear();
+    };
+
+    const scheduleFlush = () => {
+        if (scheduled) return;
+        scheduled = true;
+
+        if ('requestAnimationFrame' in window) {
+            window.requestAnimationFrame(() => flush());
+            return;
+        }
+
+        window.setTimeout(flush, 0);
+    };
+
+    const queueInit = (el) => {
+        if (!(el instanceof HTMLInputElement)) return;
+        if (pendingDestroy.has(el) || pendingRefresh.has(el)) return;
+        pendingInit.add(el);
+    };
+
+    const queueDestroy = (el) => {
+        if (!(el instanceof HTMLInputElement)) return;
+        pendingInit.delete(el);
+        pendingRefresh.delete(el);
+        pendingDestroy.add(el);
+    };
+
+    const queueRefresh = (el) => {
+        if (!(el instanceof HTMLInputElement)) return;
+        if (mutedAttributeElements.has(el)) return;
+        if (pendingDestroy.has(el)) return;
+        pendingInit.delete(el);
+        pendingRefresh.add(el);
+    };
+
+    const queueTree = (node, action) => {
+        if (!(node instanceof Element)) return;
+
+        if (node.matches?.(MASK_SELECTOR)) {
+            action(node);
+        }
+
+        if (!node.querySelectorAll) return;
+
+        node.querySelectorAll(MASK_SELECTOR).forEach(action);
+    };
+
     const observer = new MutationObserver((mutations) => {
         for (const mutation of mutations) {
             if (mutation.type === 'childList') {
-                mutation.addedNodes.forEach((node) => {
-                    if (!(node instanceof Element)) return;
-
-                    if (node.matches?.(MASK_SELECTOR)) {
-                        initMaskElement(node);
-                    }
-
-                    if (node.querySelectorAll) {
-                        node.querySelectorAll(MASK_SELECTOR).forEach(initMaskElement);
-                    }
-                });
-
-                mutation.removedNodes.forEach((node) => {
-                    if (!(node instanceof Element)) return;
-
-                    if (node.matches?.(MASK_SELECTOR)) {
-                        destroyMaskElement(node);
-                    }
-
-                    if (node.querySelectorAll) {
-                        node.querySelectorAll(MASK_SELECTOR).forEach(destroyMaskElement);
-                    }
-                });
+                mutation.addedNodes.forEach((node) => queueTree(node, queueInit));
+                mutation.removedNodes.forEach((node) => queueTree(node, queueDestroy));
             }
 
             if (mutation.type === 'attributes') {
                 const target = mutation.target;
                 if (target instanceof HTMLInputElement && target.matches(MASK_SELECTOR)) {
-                    refreshMaskElement(target);
+                    queueRefresh(target);
                 }
             }
         }
+
+        scheduleFlush();
     });
 
     observer.observe(document.documentElement, {
