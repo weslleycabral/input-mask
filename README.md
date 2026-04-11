@@ -1,14 +1,23 @@
 # InputMask
 
+<div align="center">
+
+![License](https://img.shields.io/badge/license-MIT-green)
+![CDN](https://img.shields.io/badge/CDN-jsDelivr-blue)
+![Status](https://img.shields.io/badge/status-stable-brightgreen)
+![Javascript](https://img.shields.io/badge/language-javascript-yellow)
+
+</div>
+
 A lightweight library for applying input masks using HTML attributes only.
 
 It was built to remove the usual complexity of input masking from frontend forms. Instead of wiring custom JavaScript, you add a script tag once and configure each field with attributes directly in HTML. That makes it especially useful for landing pages, marketing sites, internal tools, and no-code workflows.
 
 Under the hood, this library uses [IMask](https://imask.js.org/) as its masking engine.
 
-## Install via CDN
+## Installation
 
-Add the script below to your page with `defer` so it does not block rendering and helps preserve performance:
+### CDN (Recommended)
 
 ```html
 <script defer src="https://cdn.jsdelivr.net/npm/input-mask@1.0.0/dist/input-mask.min.js"></script>
