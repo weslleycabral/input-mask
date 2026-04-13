@@ -20,7 +20,7 @@ Under the hood, this library uses [IMask](https://imask.js.org/) as its masking 
 ### CDN (Recommended)
 
 ```html
-<script defer src="https://cdn.jsdelivr.net/npm/input-mask@1.0.0/dist/input-mask.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/gh/weslleycabral/input-mask@v1.0.0/dist/input-mask.min.js"></script>
 ```
 
 Once the script is loaded, you only need to add attributes to your `input` elements.
